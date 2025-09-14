@@ -2,6 +2,8 @@ import os
 import math
 import uuid
 import base64
+import time
+import re
 from typing import List, Optional, Tuple
 
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -232,22 +234,66 @@ def try_generate_image_with_key(
     return img_bytes, mime
 
 
+def _extract_retry_delay_seconds_from_error_text(error_text: str) -> Optional[int]:
+    # Look for patterns like retryDelay': '29s' or retryDelay: 29s
+    try:
+        match = re.search(r"retryDelay[^0-9]*([0-9]+)s", error_text, flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+    return None
+
+
 def generate_image_with_key_rotation(
     api_keys: List[str],
     model_name: str,
     contents: List[object],
+    max_rounds: int = 6,
+    base_sleep_seconds: int = 5,
 ) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
-    """Try keys one by one until success. Returns (image_bytes, mime, error_message)."""
-    last_error = None
-    for idx, key in enumerate(api_keys):
-        try:
-            img_bytes, mime = try_generate_image_with_key(key, model_name, contents)
-            if img_bytes:
-                return img_bytes, mime, None
-            last_error = f"No image returned with key index {idx}"
-        except Exception as e:
-            last_error = f"Key index {idx} failed: {e}"
-            # Continue to next key
+    """Try keys with retries/backoff until success or rounds exhausted.
+
+    Returns (image_bytes, mime, error_message).
+    """
+    last_error: Optional[str] = None
+    for round_index in range(max_rounds):
+        any_transient = False
+        for idx, key in enumerate(api_keys):
+            try:
+                img_bytes, mime = try_generate_image_with_key(key, model_name, contents)
+                if img_bytes:
+                    return img_bytes, mime, None
+                last_error = f"No image returned with key index {idx}"
+            except Exception as e:
+                err_text = str(e)
+                last_error = f"Key index {idx} failed: {err_text}"
+                # Detect transient/rate-limit/quota errors -> mark transient
+                if (
+                    "RESOURCE_EXHAUSTED" in err_text
+                    or "429" in err_text
+                    or "rate" in err_text.lower()
+                    or "quota" in err_text.lower()
+                ):
+                    any_transient = True
+                    # Respect per-error suggested delay if present
+                    suggested = _extract_retry_delay_seconds_from_error_text(err_text)
+                    if suggested:
+                        time.sleep(min(120, max(1, suggested)))
+                    else:
+                        # brief sleep before trying next key
+                        time.sleep(1)
+                else:
+                    # For non-transient errors (e.g., INVALID_ARGUMENT), move on to next key immediately
+                    continue
+
+        if any_transient:
+            # Exponential backoff between rounds
+            sleep_seconds = min(120, base_sleep_seconds * (2 ** round_index))
+            time.sleep(sleep_seconds)
+        else:
+            # Nothing transient in this round; break early
+            break
     return None, None, last_error
 
 
