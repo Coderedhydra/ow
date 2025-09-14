@@ -37,7 +37,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
 
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
-DEFAULT_MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+DEFAULT_MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-image-preview")
 
 
 def read_default_keys() -> str:

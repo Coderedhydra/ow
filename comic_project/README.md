@@ -62,15 +62,15 @@ App will start on `http://localhost:5000` (binds to `0.0.0.0`).
 
 ## Model Selection
 
-- Default model is `gemini-2.0-flash`. You can change it in the UI or by setting env var:
+- Default model is `gemini-2.5-flash-image-preview`. You can change it in the UI or by setting env var:
 
 ```bash
-export GEMINI_MODEL=gemini-2.0-flash
+export GEMINI_MODEL=gemini-2.5-flash-image-preview
 ```
 
 - In `app.py`, generation is performed using:
   - `client.models.generate_content(model=..., contents=..., config=...)`
-  - The `config` sets `response_modalities=["IMAGE"]` and requests PNG output when possible.
+  - The `config` requests image output with `response_modalities=[IMAGE]`.
 
 If your account or region supports other image-capable models, you can switch the model name accordingly.
 
