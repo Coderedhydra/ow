@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comic Result</title>
+  <style>
+    :root { --gap: 12px; --accent: #4f46e5; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; padding: 0; background: #0f172a; color: #e5e7eb; }
+    header { padding: 20px; background: #111827; border-bottom: 1px solid #1f2937; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p.sub { margin: 0; color: #9ca3af; }
+    .pages { display: grid; gap: 24px; }
+    .page { background: #0b1220; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .frame { background: #111827; border: 1px solid #374151; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .frame img { width: 100%; height: 260px; object-fit: cover; background: #0b1220; }
+    .frame .label { padding: 8px; font-size: 12px; color: #c7d2fe; border-top: 1px solid #1f2937; }
+    .placeholder { width: 100%; height: 260px; background: repeating-linear-gradient(45deg, #1f2937, #1f2937 10px, #0b1220 10px, #0b1220 20px); display: flex; align-items: center; justify-content: center; color: #9ca3af; font-weight: 600; }
+    .actions { margin-top: 18px; }
+    a.btn { display: inline-block; text-decoration: none; background: var(--accent); color: white; padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+    .flash { padding: 10px 12px; border-radius: 8px; margin: 12px 0; }
+    .flash.error { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+    .flash.success { background: #062f1b; color: #bbf7d0; border: 1px solid #22c55e; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Comic Generated</h1>
+    <p class="sub">{{ total_pages }} page(s), {{ frames_per_page }} frames each</p>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="pages">
+      {% for page_index in range(total_pages) %}
+        <div class="page">
+          <h3 style="margin: 0 0 12px; color: #e5e7eb;">Page {{ page_index + 1 }}</h3>
+          <div class="grid">
+            {% for col in range(frames_per_page) %}
+              {% set frame = pages[page_index][col] %}
+              <div class="frame">
+                {% if frame %}
+                  <img src="{{ url_for('static', filename=frame) }}" alt="Frame {{ page_index * frames_per_page + col + 1 }}" />
+                {% else %}
+                  <div class="placeholder">Failed to generate</div>
+                {% endif %}
+                <div class="label">Frame {{ page_index * frames_per_page + col + 1 }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="actions">
+      <a class="btn" href="{{ url_for('index') }}">Create Another Comic</a>
+    </div>
+  </main>
+</body>
+</html>
+
