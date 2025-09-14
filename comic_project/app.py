@@ -200,10 +200,16 @@ def try_generate_image_with_key(
 
     client = genai.Client(api_key=api_key)
 
+    # Build config requesting IMAGE modality. Do NOT set response_mime_type here,
+    # as some backends only allow text mime types and will reject image mimes.
+    modality_enum = getattr(types, "ResponseModality", None)
+    if modality_enum is not None and hasattr(modality_enum, "IMAGE"):
+        response_modalities = [modality_enum.IMAGE]
+    else:
+        response_modalities = ["IMAGE"]
+
     config = types.GenerateContentConfig(
-        response_modalities=["IMAGE"],
-        # Ensure PNG output if possible
-        response_mime_type="image/png",
+        response_modalities=response_modalities,
     )
 
     resp = client.models.generate_content(
