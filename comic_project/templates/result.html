@@ -28,7 +28,7 @@
 <body>
   <header>
     <h1>Comic Generated</h1>
-    <p class="sub">5 pages, 6 frames each</p>
+    <p class="sub">{{ total_pages }} page(s), {{ frames_per_page }} frames each</p>
   </header>
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}

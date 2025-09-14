@@ -95,6 +95,13 @@ For frames marked as single-character, the prompt includes strict instructions:
 
 These constraints are encoded in the prompt to reduce common image artifacts.
 
+## Customize number of frames
+
+- In the UI, set "Number of frames to generate". The app will create exactly that many frames and arrange them 6 per page. For example:
+  - 3 frames => 1 page with 3 images
+  - 6 frames => 1 page with 6 images
+  - 10 frames => 2 pages (6 on page 1, 4 on page 2)
+
 ## Troubleshooting
 
 - If you see errors like invalid key or rate limit, add more keys or wait and try again.

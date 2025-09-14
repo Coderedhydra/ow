@@ -1,4 +1,5 @@
 import os
+import math
 import uuid
 import base64
 from typing import List, Optional, Tuple
@@ -291,14 +292,20 @@ def generate():
     characters_text = request.form.get("characters", "").strip()
     style_text = request.form.get("style", "").strip()
     storyline_text = request.form.get("storyline", "").strip()
+    # Frames count
+    try:
+        frames_count = int(request.form.get("frames_count", "30").strip())
+    except Exception:
+        frames_count = 30
+    frames_count = max(1, min(60, frames_count))  # allow up to 60 to be safe
 
     api_keys = parse_api_keys(api_keys_text)
     if not api_keys:
         flash("Please provide at least one Gemini API key.", "error")
         return redirect(url_for("index"))
 
-    # Single-character flags for 30 frames
-    total_frames = 30
+    # Single-character flags for selected frames
+    total_frames = frames_count
     single_flags: List[bool] = [False] * total_frames
     raw_flags = request.form.getlist("single_flags")  # list of frame indices as strings
     try:
@@ -357,18 +364,20 @@ def generate():
     else:
         flash("All frames generated successfully!", "success")
 
-    # Group into pages of 6 frames each (5 pages)
+    # Group into pages of 6 frames each (dynamic page count)
     pages: List[List[Optional[str]]] = []
-    for p in range(5):
-        start = p * 6
-        end = start + 6
+    frames_per_page = 6
+    total_pages = max(1, math.ceil(total_frames / frames_per_page))
+    for p in range(total_pages):
+        start = p * frames_per_page
+        end = start + frames_per_page
         pages.append(frame_paths[start:end])
 
     return render_template(
         "result.html",
         pages=pages,
-        total_pages=5,
-        frames_per_page=6,
+        total_pages=total_pages,
+        frames_per_page=frames_per_page,
     )
 
 
