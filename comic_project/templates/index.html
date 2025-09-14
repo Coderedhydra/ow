@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comic Generator</title>
+  <style>
+    :root { --gap: 12px; --accent: #4f46e5; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; padding: 0; background: #0f172a; color: #e5e7eb; }
+    header { padding: 20px; background: #111827; border-bottom: 1px solid #1f2937; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p.sub { margin: 0; color: #9ca3af; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); margin-top: 20px; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: #c7d2fe; }
+    textarea, input[type="text"], input[type="file"], select { width: 100%; box-sizing: border-box; padding: 10px; background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 8px; }
+    input[type="file"] { padding: 8px; }
+    .help { color: #9ca3af; font-size: 12px; margin-top: 4px; }
+    .grid-frames { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; background: #0b1220; padding: 12px; border: 1px solid #1f2937; border-radius: 8px; }
+    .frame-flag { background: #111827; border: 1px solid #374151; border-radius: 8px; padding: 8px; text-align: center; }
+    .frame-flag label { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; color: #e5e7eb; }
+    .actions { display: flex; gap: 12px; }
+    button { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 12px 16px; font-weight: 700; cursor: pointer; }
+    button:hover { filter: brightness(1.05); }
+    .note { color: #9ca3af; font-size: 13px; }
+    .flash { padding: 10px 12px; border-radius: 8px; margin: 12px 0; }
+    .flash.error { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+    .flash.success { background: #062f1b; color: #bbf7d0; border: 1px solid #22c55e; }
+  </style>
+  <script>
+    function toggleAllSingleFlags(checked) {
+      const boxes = document.querySelectorAll('input[name="single_flags"]');
+      boxes.forEach(b => b.checked = checked);
+    }
+  </script>
+  <script>
+    // Ensure each checkbox submits a value by using value=index and name=single_flags
+  </script>
+  <script>
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.id === 'checkAllSingle') {
+        toggleAllSingleFlags(e.target.checked);
+      }
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Google Gemini Comic Generator</h1>
+    <p class="sub">Create a 5-page comic with 6 frames per page (30 frames)</p>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('generate') }}" method="post" enctype="multipart/form-data">
+      <div class="full">
+        <label for="api_keys">Gemini / GenAI API Keys</label>
+        <textarea id="api_keys" name="api_keys" rows="4" placeholder="Paste one key per line">{{ default_keys }}</textarea>
+        <div class="help">You can also set env var <code>GOOGLE_API_KEY</code> or <code>GEMINI_API_KEY</code>. Keys are rotated automatically if a request fails or is rate limited.</div>
+      </div>
+
+      <div>
+        <label for="model_name">Model Name</label>
+        <input type="text" id="model_name" name="model_name" value="{{ default_model }}" />
+        <div class="help">Example: <code>gemini-2.0-flash</code>. You can change this in the README.</div>
+      </div>
+
+      <div>
+        <label for="style">Style</label>
+        <select id="style" name="style">
+          <option value="Manga">Manga</option>
+          <option value="Cartoon">Cartoon</option>
+          <option value="Realistic">Realistic</option>
+          <option value="Watercolor">Watercolor</option>
+          <option value="Pixel Art">Pixel Art</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <label for="characters">Characters (comma-separated or short description)</label>
+        <input type="text" id="characters" name="characters" placeholder="e.g., Alex (pilot), Nia (engineer), Zed (robot)" />
+      </div>
+
+      <div class="full">
+        <label for="storyline">Storyline</label>
+        <textarea id="storyline" name="storyline" rows="5" placeholder="Brief overall plot. The model will stage each frame accordingly."></textarea>
+      </div>
+
+      <div class="full">
+        <label for="mockup">Optional Mockup Image (used as guidance or base)</label>
+        <input type="file" id="mockup" name="mockup" accept="image/png,image/jpeg,image/webp" />
+        <div class="help">If provided, it will be included in the prompt using <code>types.Part.from_bytes(...)</code> as guidance.</div>
+      </div>
+
+      <div class="full">
+        <label>Single-Character Frames (Stricter constraints)</label>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <input type="checkbox" id="checkAllSingle" />
+          <label for="checkAllSingle" style="margin:0;">Check/Uncheck all</label>
+        </div>
+        <div class="grid-frames">
+          {% for i in range(30) %}
+          <div class="frame-flag">
+            <label>
+              <input type="checkbox" name="single_flags" value="{{ i }}" />
+              Frame {{ i + 1 }}
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="help">Checked frames will enforce strict single-character rules: exactly two eyes aligned, no ghost faces, no duplicate faces, clear anatomy.</div>
+      </div>
+
+      <div class="full actions">
+        <button type="submit">Generate Comic</button>
+        <span class="note">Generation will create 30 frames. Failures will be reported but won't stop others.</span>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
+
